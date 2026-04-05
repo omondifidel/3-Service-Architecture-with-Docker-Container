@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Service 1: The Bank Frontend (HTML/CSS/JS)
+  sky-frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"        # Host 8080 -> Container 80
+    networks:
+      - sky-net
+    depends_on:
+      - sky-backend
+
+  # Service 2: The Bank API (Python/Flask Backend)
+  sky-backend:
+    build: ./backend
+    ports:
+      - "5000:5000"      # Host 5000 -> Container 5000
+    networks:
+      - sky-net
+    depends_on:
+      - sky-db           # Ensures the database starts before the API
+    environment:
+      - DATABASE_URL=postgres://postgres:secret-bank-pass@sky-db:5432/postgres
+
+  # Service 3: The Bank Database (PostgreSQL)
+  sky-db:
+    image: postgres:alpine
+    environment:
+      POSTGRES_PASSWORD: secret-bank-pass
+    networks:
+      - sky-net
+    volumes:
+      - sky-db-data:/var/lib/postgresql/data  # Remember our volume practice!
+
+networks:
+  sky-net:
+    driver: bridge
+
+volumes:
+  sky-db-data:          # This keeps your bank data safe if the container stops
