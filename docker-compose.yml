@@ -1,41 +1,45 @@
-version: '3.8'
 
 services:
-  # Service 1: The Bank Frontend (HTML/CSS/JS)
+  # Service 1: The Bank Database (PostgreSQL)
+  sky-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: sky_admin
+      POSTGRES_PASSWORD: bank_password
+      POSTGRES_DB: sky_bank
+    networks:
+      - sky-network
+    volumes:
+      - sky-db-data:/var/lib/postgresql/data
+
+  # Service 2: The Bank API (Backend)
+  sky-api:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      # We use the service name 'sky-db' as the hostname
+      DATABASE_URL: "postgresql://sky_admin:bank_password@sky-db:5432/sky_bank"
+    depends_on:
+      - sky-db
+    networks:
+      - sky-network
+
+  # Service 3: The Bank Frontend
   sky-frontend:
     build: ./frontend
     ports:
-      - "8080:80"        # Host 8080 -> Container 80
-    networks:
-      - sky-net
+      - "8080:80"
     depends_on:
-      - sky-backend
-
-  # Service 2: The Bank API (Python/Flask Backend)
-  sky-backend:
-    build: ./backend
-    ports:
-      - "5000:5000"      # Host 5000 -> Container 5000
+      - sky-api
     networks:
-      - sky-net
-    depends_on:
-      - sky-db           # Ensures the database starts before the API
-    environment:
-      - DATABASE_URL=postgres://postgres:secret-bank-pass@sky-db:5432/postgres
+      - sky-network
 
-  # Service 3: The Bank Database (PostgreSQL)
-  sky-db:
-    image: postgres:alpine
-    environment:
-      POSTGRES_PASSWORD: secret-bank-pass
-    networks:
-      - sky-net
-    volumes:
-      - sky-db-data:/var/lib/postgresql/data  # Remember our volume practice!
-
+# Define the shared network for all containers to talk to each other
 networks:
-  sky-net:
+  sky-network:
     driver: bridge
 
+# Define the volume so your bank data survives a restart
 volumes:
-  sky-db-data:          # This keeps your bank data safe if the container stops
+  sky-db-data:
